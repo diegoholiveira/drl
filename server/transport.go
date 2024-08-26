@@ -1,13 +1,14 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"time"
 )
 
 type Limiter interface {
-	IsAllowed(string) (time.Time, bool)
+	IsAllowed(context.Context, string) (time.Time, bool)
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)
@@ -23,7 +24,7 @@ func NewRoundTripper(original http.RoundTripper, limiter Limiter) http.RoundTrip
 
 	return roundTripperFunc(func(request *http.Request) (*http.Response, error) {
 		token := request.Header.Get("X-Limiter-Token")
-		nextWindow, allowed := limiter.IsAllowed(token)
+		nextWindow, allowed := limiter.IsAllowed(request.Context(), token)
 		if !allowed {
 			log.Printf("Rate limit exceeded for token \"%s\"\n", token)
 

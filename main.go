@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	redis "github.com/redis/go-redis/v9"
+
 	"github.com/diegoholiveira/drl/limiter"
 	"github.com/diegoholiveira/drl/server"
 )
@@ -22,8 +24,9 @@ const (
 	DefaultWriteTimeout    = 10 * time.Second
 
 	// Limiter defaults
-	DefaultRateLimit  = 3
-	DefaultTimeWindow = 1 * time.Minute
+	DefaultRateLimit   = 3
+	DefaultTimeWindow  = 1 * time.Minute
+	DefaultGranularity = 10 * time.Second
 )
 
 func main() {
@@ -36,8 +39,16 @@ func main() {
 		syscall.SIGQUIT,
 	)
 
+	ctx := context.Background()
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: ":6379",
+	})
+	_ = rdb.FlushDB(ctx).Err()
+
 	proxy := server.NewReverseProxy(
-		limiter.NewSimpleCounterLimit(DefaultRateLimit, DefaultTimeWindow),
+		// limiter.NewSimpleCounterLimit(DefaultRateLimit, DefaultTimeWindow, DefaultGranularity),
+		limiter.NewRedisLimiter(rdb, DefaultRateLimit, DefaultTimeWindow, DefaultGranularity),
 	)
 
 	srv := &http.Server{

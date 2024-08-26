@@ -1,6 +1,7 @@
 package limiter
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -59,7 +60,7 @@ func (counter *counter) verify(limit uint64) (after time.Time, allowed bool) {
 	return time.Time{}, true
 }
 
-func (s *SimpleCounterLimit) IsAllowed(token string) (time.Time, bool) {
+func (s *SimpleCounterLimit) IsAllowed(ctx context.Context, token string) (time.Time, bool) {
 	if _, found := s.counter[token]; !found {
 		s.counter[token] = &counter{
 			buckets:     make(map[uint64]uint64),
